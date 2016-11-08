@@ -16,7 +16,7 @@ namespace GraphQL.DataLoader
 
         public void Resolve<TReturn>(FetchDelegate<TReturn> fetchFunc)
         {
-            _fieldType.Resolver = new BatchResolver<TSource, TReturn>(_identityFunc, fetchFunc);
+            _fieldType.Resolver = new DataLoaderResolver<TSource, TReturn>(_identityFunc, fetchFunc);
         }
     }
 

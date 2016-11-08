@@ -33,7 +33,7 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
                 .Resolve(ctx => friendsLoader.LoadAsync(ctx.Source.HumanId));
 
             // Example 3 - manually specify a resolver
-            var friendsResolver = new BatchResolver<Human, Droid>(h => h.HumanId, fetchFunc);
+            var friendsResolver = new DataLoaderResolver<Human, Droid>(h => h.HumanId, fetchFunc);
             Field<ListGraphType<CharacterInterface>>()
                 .Name("friends3")
                 .Resolve(friendsResolver);
