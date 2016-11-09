@@ -3,9 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using GraphQL.DataLoader.StarWarsApp.Data;
 using GraphQL.DataLoader.StarWarsApp.Schema;
-using GraphQL.Http;
-using GraphQL.Types;
-using Unity;
 
 namespace GraphQL.DataLoader.StarWarsApp
 {
@@ -24,7 +21,7 @@ namespace GraphQL.DataLoader.StarWarsApp
             Console.WriteLine("Finished in {0}ms, avg time per query {1}ms", clock.ElapsedMilliseconds.ToString(), (clock.ElapsedMilliseconds / 100).ToString());
         }
 
-        private static void RunQuery(Stopwatch clock)
+        private static ExecutionResult RunQuery(Stopwatch clock)
         {
             var query = @" {
                 droids {
@@ -64,8 +61,9 @@ namespace GraphQL.DataLoader.StarWarsApp
             var executer = new DocumentExecuter();
 
             clock.Start();
-            DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Wait();
+            var result = DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Result;
             clock.Stop();
+            return result;
         }
 
         private static void InitTestData()
