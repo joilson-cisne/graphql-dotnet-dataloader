@@ -14,27 +14,22 @@ namespace GraphQL.DataLoader
         private readonly Func<TParent,int> _keySelector;
         private readonly IDataLoader<TChild> _loader;
 
-        public DataLoaderResolver(IDataLoader<TChild> loader)
+        public DataLoaderResolver(Func<TParent, int> keySelector, IDataLoader<TChild> loader)
         {
+            _keySelector = keySelector;
             _loader = loader;
         }
 
-        public DataLoaderResolver(Func<TParent,int> keySelector, FetchDelegate<TChild> fetch)
+        public DataLoaderResolver(Func<TParent, int> keySelector, FetchDelegate<TChild> fetch)
+            : this(keySelector, new DataLoader<TChild>(fetch))
         {
-            _keySelector = keySelector;
-            _loader = new DataLoader<TChild>(fetch);
-        }
-
-        public Task<IEnumerable<TChild>> Resolve(ResolveFieldContext<TParent> context)
-        {
-            var key = _keySelector(context.Source);
-            return _loader.LoadAsync(key);
         }
 
         public Task<IEnumerable<TChild>> Resolve(ResolveFieldContext context)
         {
-            var typedContext = context as ResolveFieldContext<TParent>;
-            return Resolve(typedContext ?? new ResolveFieldContext<TParent>(context));
+            var source = (TParent)context.Source;
+            var key = _keySelector(source);
+            return _loader.LoadAsync(key);
         }
 
         object IFieldResolver.Resolve(ResolveFieldContext context)

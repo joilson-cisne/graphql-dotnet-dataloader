@@ -6,17 +6,25 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
 {
     public class StarWarsQuery : ObjectGraphType
     {
-        public StarWarsQuery(StarWarsContext db)
+        public StarWarsQuery()
         {
             Name = "Query";
 
             Field<ListGraphType<HumanType>>()
                 .Name("humans")
-                .Resolve(ctx => db.Humans.ToListAsync());
+                .Resolve(ctx =>
+                {
+                    using (var db = new StarWarsContext())
+                        return db.Humans.ToListAsync();
+                });
 
             Field<ListGraphType<DroidType>>()
                 .Name("droids")
-                .Resolve(ctx => db.Droids.ToListAsync());
+                .Resolve(ctx =>
+                {
+                    using (var db = new StarWarsContext())
+                        return db.Droids.ToListAsync();
+                });
         }
     }
 }

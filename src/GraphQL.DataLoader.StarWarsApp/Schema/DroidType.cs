@@ -6,7 +6,7 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
 {
     public class DroidType : ObjectGraphType<Droid>
     {
-        public DroidType(StarWarsContext db)
+        public DroidType()
         {
             Name = "Droid";
             Field(d => d.Name);
@@ -14,13 +14,19 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
             Field(d => d.PrimaryFunction);
             Interface<CharacterInterface>();
 
+            FetchDelegate<Human> fetchFriends = ids =>
+            {
+                using (var db = new StarWarsContext())
+                    return db.Friendships
+                        .Where(f => ids.Contains(f.DroidId))
+                        .Select(f => new {Key = f.DroidId, f.Human})
+                        .ToLookup(x => x.Key, x => x.Human);
+            };
+
+            // See HumanType.cs for more examples
             Field<ListGraphType<CharacterInterface>>()
                 .Name("friends")
-                .Batch(d => d.DroidId)
-                .Resolve(ids => db.Friendships
-                    .Where(f => ids.Contains(f.DroidId))
-                    .Select(f => new {Key = f.DroidId, f.Human})
-                    .ToLookup(x => x.Key, x => x.Human));
+                .Resolve(d => d.DroidId, fetchFriends);
         }
     }
 }

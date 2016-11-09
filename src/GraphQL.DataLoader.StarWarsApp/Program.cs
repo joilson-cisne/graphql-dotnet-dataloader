@@ -18,29 +18,14 @@ namespace GraphQL.DataLoader.StarWarsApp
             Console.WriteLine("Executing query 100 times...");
 
             var clock = new Stopwatch();
-            ExecutionResult result = null;
-
             for (var i = 0; i < 100; i++)
-            {
-                result = RunQuery(clock);
-            }
+                RunQuery(clock);
 
             Console.WriteLine("Finished in {0}ms, avg time per query {1}ms", clock.ElapsedMilliseconds.ToString(), (clock.ElapsedMilliseconds / 100).ToString());
-            Console.WriteLine("Last result: {0}", new DocumentWriter().Write(result));
         }
 
-        private static ExecutionResult RunQuery(Stopwatch clock)
+        private static void RunQuery(Stopwatch clock)
         {
-            var container = new UnityContainer();
-
-            container.RegisterInstance(new StarWarsContext());
-            container.RegisterType<StarWarsQuery>();
-            container.RegisterType<DroidType>();
-            container.RegisterType<HumanType>();
-
-            var schema = new StarWarsSchema(t => container.Resolve(t) as GraphType);
-            var executer = new DocumentExecuter();
-
             var query = @" {
                 droids {
                     droidId
@@ -75,10 +60,12 @@ namespace GraphQL.DataLoader.StarWarsApp
                 }
             }";
 
+            var schema = new StarWarsSchema();
+            var executer = new DocumentExecuter();
+
             clock.Start();
-            var result = DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Result;
+            DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Wait();
             clock.Stop();
-            return result;
         }
 
         private static void InitTestData()

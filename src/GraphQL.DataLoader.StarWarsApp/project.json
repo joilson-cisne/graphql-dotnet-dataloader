@@ -12,8 +12,7 @@
       "version": "1.0.0-preview2-final",
       "type": "build"
     },
-    "Microsoft.EntityFrameworkCore.Sqlite": "1.0.1",
-    "Unity": "4.0.2"
+    "Microsoft.EntityFrameworkCore.Sqlite": "1.0.1"
   },
   "frameworks": {
     "netcoreapp1.0": {

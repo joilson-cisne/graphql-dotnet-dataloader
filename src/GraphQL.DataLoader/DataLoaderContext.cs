@@ -71,7 +71,7 @@ namespace GraphQL.DataLoader
                 throw new ObjectDisposedException(nameof(DataLoaderContext));
 
             var tcs = new TaskCompletionSource<T>();
-            var cancellation = _cancellationToken.Register(() => tcs.SetCanceled());
+            var cancellation = _cancellationToken.Register(tcs.SetCanceled);
             _queue.Enqueue(() =>
             {
                 cancellation.Dispose();
