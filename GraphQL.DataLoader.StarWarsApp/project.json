@@ -1,5 +1,4 @@
 ﻿{
-  "name": "GraphQL.DataLoader.StarWarsApp",
   "version": "0.0.0-*",
   "buildOptions": {
     "debugType": "portable",
