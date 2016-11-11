@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "GraphQL.DataLoader.StarWarsApp", "src\GraphQL.DataLoader.StarWarsApp\GraphQL.DataLoader.StarWarsApp.xproj", "{F677E4D1-027E-4D6F-AB83-4556841995EA}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "GraphQL.DataLoader", "GraphQL.DataLoader\GraphQL.DataLoader.xproj", "{3EB6DAEA-226F-44D3-8EA1-D999FA59A101}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "GraphQL.DataLoader", "src\GraphQL.DataLoader\GraphQL.DataLoader.xproj", "{3EB6DAEA-226F-44D3-8EA1-D999FA59A101}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "GraphQL.DataLoader.StarWarsApp", "GraphQL.DataLoader.StarWarsApp\GraphQL.DataLoader.StarWarsApp.xproj", "{F677E4D1-027E-4D6F-AB83-4556841995EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
