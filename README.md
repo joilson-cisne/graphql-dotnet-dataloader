@@ -1,5 +1,11 @@
-GraphQL + DataLoader in .NET
-============================
+GraphQL.DataLoader
+==================
+
+One solution to the [select N+1 problem](https://github.com/graphql-dotnet/graphql-dotnet/issues/21) in .NET.
+
+Contents
+--------
+
 Small server using [GraphQL](http://github.com/graphql-dotnet/graphql-dotnet) and an implementation of [DataLoader](http://github.com/facebook/dataloader) in .NET.
 
 + __GraphQL.DataLoader__ - Contains the DataLoader classes and a GraphQL resolver.
