@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using GraphQL.DataLoader.StarWarsApp.Data;
 using GraphQL.Types;
@@ -16,6 +17,7 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
 
             FetchDelegate<Droid> fetchFriends = ids =>
             {
+                Console.WriteLine("Fetching friends of humans " + string.Join(", ", ids));
                 using (var db = new StarWarsContext())
                     return db.Friendships
                         .Where(f => ids.Contains(f.HumanId))

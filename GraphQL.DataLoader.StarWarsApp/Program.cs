@@ -11,17 +11,10 @@ namespace GraphQL.DataLoader.StarWarsApp
         public static void Main(string[] args)
         {
             InitTestData();
-
-            Console.WriteLine("Executing query 100 times...");
-
-            var clock = new Stopwatch();
-            for (var i = 0; i < 100; i++)
-                RunQuery(clock);
-
-            Console.WriteLine("Finished in {0}ms, avg time per query {1}ms", clock.ElapsedMilliseconds.ToString(), (clock.ElapsedMilliseconds / 100).ToString());
+            RunQuery();
         }
 
-        private static ExecutionResult RunQuery(Stopwatch clock)
+        private static ExecutionResult RunQuery(Stopwatch clock = null)
         {
             var query = @" {
                 droids {
@@ -38,20 +31,6 @@ namespace GraphQL.DataLoader.StarWarsApp
                                     name
                                 }
                             }
-                            friends2 {
-                                name
-                                friends {
-                                    friends {
-                                        name
-                                    }
-                                }
-                            }
-                            friends3 {
-                                name
-                            }
-                            friends4 {
-                                name
-                            }
                         }
                     }
                 }
@@ -60,9 +39,9 @@ namespace GraphQL.DataLoader.StarWarsApp
             var schema = new StarWarsSchema();
             var executer = new DocumentExecuter();
 
-            clock.Start();
+            if (clock != null) clock.Start();
             var result = DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Result;
-            clock.Stop();
+            if (clock != null) clock.Stop();
             return result;
         }
 
