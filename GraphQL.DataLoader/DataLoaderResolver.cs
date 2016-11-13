@@ -9,9 +9,9 @@ namespace GraphQL.DataLoader
     /// <summary>
     /// Collects each item into a batch to be fetched or queried in one call.d.
     /// </summary>
-    public class DataLoaderResolver<TParent,TChild> : IFieldResolver<Task<IEnumerable<TChild>>>
+    public class DataLoaderResolver<TParent, TChild> : IFieldResolver<Task<IEnumerable<TChild>>>
     {
-        private readonly Func<TParent,int> _keySelector;
+        private readonly Func<TParent, int> _keySelector;
         private readonly IDataLoader<TChild> _loader;
 
         public DataLoaderResolver(Func<TParent, int> keySelector, IDataLoader<TChild> loader)
