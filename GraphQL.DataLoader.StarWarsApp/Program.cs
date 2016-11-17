@@ -39,9 +39,9 @@ namespace GraphQL.DataLoader.StarWarsApp
             var schema = new StarWarsSchema();
             var executer = new DocumentExecuter();
 
-            if (clock != null) clock.Start();
+            clock?.Start();
             var result = DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Result;
-            if (clock != null) clock.Stop();
+            clock?.Stop();
             return result;
         }
 
