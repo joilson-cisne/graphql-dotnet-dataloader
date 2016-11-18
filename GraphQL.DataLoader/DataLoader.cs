@@ -27,8 +27,7 @@ namespace GraphQL.DataLoader
         public async Task<IEnumerable<T>> LoadAsync(int key)
         {
             if (DataLoaderContext.Current == null)
-                throw new InvalidOperationException($"{nameof(LoadAsync)} must be called within an active DataLoaderContext" +
-                                                    $" - use {nameof(DataLoaderContext)}.{nameof(DataLoaderContext.Run)}");
+                throw new InvalidOperationException($"Load must be called within an active DataLoaderContext");
 
             if (_keys.Count == 0)
                 _future = DataLoaderContext.Current.Enqueue(Fetch);

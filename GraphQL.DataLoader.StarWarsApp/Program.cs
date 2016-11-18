@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using GraphQL.DataLoader.StarWarsApp.Data;
 using GraphQL.DataLoader.StarWarsApp.Schema;
+using GraphQL.Http;
 
 namespace GraphQL.DataLoader.StarWarsApp
 {
@@ -11,7 +12,10 @@ namespace GraphQL.DataLoader.StarWarsApp
         public static void Main(string[] args)
         {
             InitTestData();
-            RunQuery();
+
+            var writer = new DocumentWriter(true);
+            var result = RunQuery();
+            Console.WriteLine(writer.Write(result));
         }
 
         private static ExecutionResult RunQuery(Stopwatch clock = null)

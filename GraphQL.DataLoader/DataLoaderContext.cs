@@ -7,30 +7,62 @@ namespace GraphQL.DataLoader
 {
     public class DataLoaderContext : IDisposable
     {
+        private static readonly AsyncLocal<DataLoaderContext> CurrentContext = new AsyncLocal<DataLoaderContext>();
+
         /// <summary>
-        /// Context for the current batch operation.
-        /// Pending fetches will be executed upon its disposal.
+        /// Context representing the collection phase for the current DataLoader batch.
         /// </summary>
-        public static DataLoaderContext Current { get; private set; }
+        public static DataLoaderContext Current => CurrentContext.Value;
 
         /// <summary>
         /// Runs code within a new DataLoaderContext.
         /// Loaders will collect keys during the given function's
-        /// execution then fire them once it has finished.
+        /// execution then fire them synchronously once finished.
         /// </summary>
         public static T Run<T>(Func<T> func)
         {
-            if (Current != null)
+            if (CurrentContext.Value != null)
                 throw new InvalidOperationException($"An active {nameof(DataLoaderContext)} already exists");
 
-            T result;
-            using (Current = new DataLoaderContext())
+            var ctx = new DataLoaderContext();
+            CurrentContext.Value = ctx;
+
+            try
             {
-                result = func();
-                Current.Flush();
+                var result = func();
+                ctx.Flush();
+                return result;
             }
-            Current = null;
-            return result;
+            finally
+            {
+                ctx.Dispose();
+                CurrentContext.Value = null;
+            }
+        }
+
+        /// <summary>
+        /// Runs code within a new DataLoaderContext.
+        /// Loaders will collect keys during the given function's
+        /// execution then fire them synchronously once finished.
+        /// </summary>
+        public static void Run(Action action)
+        {
+            if (CurrentContext.Value != null)
+                throw new InvalidOperationException($"An active {nameof(DataLoaderContext)} already exists");
+
+            var ctx = new DataLoaderContext();
+            CurrentContext.Value = ctx;
+
+            try
+            {
+                action();
+                ctx.Flush();
+            }
+            finally
+            {
+                ctx.Dispose();
+                CurrentContext.Value = null;
+            }
         }
 
         /// <summary>
@@ -72,11 +104,13 @@ namespace GraphQL.DataLoader
 
             var tcs = new TaskCompletionSource<T>();
             var cancellation = _cancellationToken.Register(tcs.SetCanceled);
+
             _queue.Enqueue(() =>
             {
                 cancellation.Dispose();
                 tcs.SetResult(fetch());
             });
+
             return tcs.Task;
         }
 

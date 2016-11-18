@@ -1,19 +1,4 @@
-﻿using System;
-using GraphQL.Types;
-
-namespace GraphQL.DataLoader.StarWarsApp.Schema
+﻿$HEADER$namespace $NAMESPACE$
 {
-    public class StarWarsSchema : GraphQL.Types.Schema
-    {
-        public StarWarsSchema()
-        {
-            Query = new StarWarsQuery();
-        }
-
-        public StarWarsSchema(Func<Type, GraphType> resolveType)
-            : base(resolveType)
-        {
-            Query = (ObjectGraphType)resolveType(typeof (StarWarsQuery));
-        }
-    }
+  public class $CLASS$ {$END$}
 }
