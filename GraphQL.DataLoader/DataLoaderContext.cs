@@ -7,12 +7,49 @@ namespace GraphQL.DataLoader
 {
     public class DataLoaderContext : IDisposable
     {
-        private static readonly AsyncLocal<DataLoaderContext> CurrentContext = new AsyncLocal<DataLoaderContext>();
-
         /// <summary>
         /// Context representing the collection phase for the current DataLoader batch.
         /// </summary>
-        public static DataLoaderContext Current => CurrentContext.Value;
+        public static DataLoaderContext Current { get; private set; }
+
+        /// <summary>
+        /// Runs code within a new DataLoaderContext.
+        /// Loaders will collect keys during the given function's
+        /// execution then fire them synchronously once finished.
+        /// </summary>
+        public static T Run<T>(Func<DataLoaderContext, T> func)
+        {
+            if (Current != null)
+                throw new InvalidOperationException($"An active {nameof(DataLoaderContext)} already exists");
+
+            var ctx = new DataLoaderContext();
+            Current = ctx;
+
+            try
+            {
+                var result = func(ctx);
+                ctx.Flush();
+                return result;
+            }
+            finally
+            {
+                ctx.Dispose();
+                Current = null;
+            }
+        }
+        /// <summary>
+        /// Runs code within a new DataLoaderContext.
+        /// Loaders will collect keys during the given function's
+        /// execution then fire them synchronously once finished.
+        /// </summary>
+        public static void Run(Action<DataLoaderContext> action)
+        {
+            Run<object>(ctx =>
+            {
+                action(ctx);
+                return null;
+            });
+        }
 
         /// <summary>
         /// Runs code within a new DataLoaderContext.
@@ -21,48 +58,17 @@ namespace GraphQL.DataLoader
         /// </summary>
         public static T Run<T>(Func<T> func)
         {
-            if (CurrentContext.Value != null)
-                throw new InvalidOperationException($"An active {nameof(DataLoaderContext)} already exists");
-
-            var ctx = new DataLoaderContext();
-            CurrentContext.Value = ctx;
-
-            try
-            {
-                var result = func();
-                ctx.Flush();
-                return result;
-            }
-            finally
-            {
-                ctx.Dispose();
-                CurrentContext.Value = null;
-            }
+            return Run(ctx => func());
         }
 
         /// <summary>
         /// Runs code within a new DataLoaderContext.
-        /// Loaders will collect keys during the given function's
+        /// Loaders will collect keys during the given action's
         /// execution then fire them synchronously once finished.
         /// </summary>
         public static void Run(Action action)
         {
-            if (CurrentContext.Value != null)
-                throw new InvalidOperationException($"An active {nameof(DataLoaderContext)} already exists");
-
-            var ctx = new DataLoaderContext();
-            CurrentContext.Value = ctx;
-
-            try
-            {
-                action();
-                ctx.Flush();
-            }
-            finally
-            {
-                ctx.Dispose();
-                CurrentContext.Value = null;
-            }
+            Run(ctx => action());
         }
 
         /// <summary>
@@ -73,7 +79,26 @@ namespace GraphQL.DataLoader
         private CancellationTokenSource _cancellationTokenSource;
         private CancellationToken _cancellationToken;
 
-        private DataLoaderContext()
+        /// <summary>
+        /// Creates a new DataLoaderContext.
+        ///
+        /// When constructing a DataLoaderContext manually, it becomes the caller's
+        /// responsibility to specify when to execute the context's fetch queue.
+        /// The created context should be passed to a DataLoader's constructor,
+        /// which will then add itself to the fetch queue when LoadAsync is called.
+        /// When the batch phase is finished and it's time to execute the batch
+        /// queries, call the Flush method.
+        ///
+        /// This approach gives the developer greater control over the batch/fetch cycle
+        /// when compared to implicitly creating a (ambient) context via the static Run method
+        /// and helps mediate any thread safety concerns, since the dependency is explicitly
+        /// passing through the call stack. This can also help make data and control flow clearer
+        /// (especially for shallow call stacks), however in scenarios where the data loads are
+        /// occurring deep within an application's stack, relying on an implicit context may be
+        /// more appropriate to keep intermediary methods clean from parameters that are unrelated
+        /// to the method's purpose but are required by the things it calls.
+        /// </summary>
+        public DataLoaderContext()
         {
             _queue = new Queue<Action>();
             _cancellationTokenSource = new CancellationTokenSource();
@@ -86,7 +111,7 @@ namespace GraphQL.DataLoader
         /// functions to be added to the queue. This is what we want, since it
         /// allows us to set up dependent loaders and resolvers.
         /// </summary>
-        private void Flush()
+        public void Flush()
         {
             while (_queue.Count > 0)
             {
