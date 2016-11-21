@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}/src/GraphQL.TestApp/bin/Debug/netcoreapp1.0/GraphQL.TestApp.dll",
+            "program": "${workspaceRoot}/src/GraphQL.StarWarsApp/bin/Debug/netcoreapp1.0/GraphQL.StarWarsApp.dll",
             "args": [],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,

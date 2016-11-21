@@ -8,10 +8,15 @@
     "tasks": [
         {
             "taskName": "build",
-            "args": [ "src/GraphQL.TestApp" ],
+            "args": [ "GraphQL.DataLoader.StarWarsApp" ],
             "isBuildCommand": true,
             "showOutput": "silent",
             "problemMatcher": "$msCompile"
+        },
+        {
+            "taskName": "test",
+            "args": [ "GraphQL.DataLoader.Tests" ],
+            "isTestCommand": true
         }
     ]
 }
