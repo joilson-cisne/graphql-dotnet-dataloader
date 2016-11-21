@@ -16,25 +16,24 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
             Field(h => h.HomePlanet);
             Interface<CharacterInterface>();
 
-            Func<IEnumerable<int>, IDictionary<int, IEnumerable<Droid>>> fetchFriends = ids =>
+            Func<IEnumerable<int>, ILookup<int, Droid>> fetchFriends = ids =>
             {
                 Console.WriteLine("Fetching friends of humans " + string.Join(", ", ids));
                 using (var db = new StarWarsContext())
                     return db.Friendships
                         .Where(f => ids.Contains(f.HumanId))
                         .Select(f => new {Key = f.HumanId, f.Droid})
-                        .GroupBy(f => f.Key, f => f.Droid)
-                        .ToDictionary(f => f.Key, f => f.AsEnumerable());
+                        .ToLookup(f => f.Key, f => f.Droid);
             };
 
             // Using the loader
-            var friendsLoader = new DataLoader<int, IEnumerable<Droid>>(fetchFriends);
+            var friendsLoader = new DataLoader<int, Droid>(fetchFriends);
             Field<ListGraphType<CharacterInterface>>()
                 .Name("friends")
                 .Resolve(ctx => friendsLoader.LoadAsync(ctx.Source.HumanId));
 
             // Using the resolver
-            var friendsResolver = new DataLoaderResolver<Human, IEnumerable<Droid>>(h => h.HumanId, fetchFriends);
+            var friendsResolver = new DataLoaderResolver<Human, Droid>(h => h.HumanId, fetchFriends);
             Field<ListGraphType<CharacterInterface>>()
                 .Name("friends2")
                 .Resolve(friendsResolver);

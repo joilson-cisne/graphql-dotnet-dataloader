@@ -36,17 +36,24 @@ namespace GraphQL.DataLoader.Tests
         [Fact]
         public void DataLoaderContext_Flush_CanHandleMultipleLevelsOfNestedFetches()
         {
-            Should.NotThrow(() =>
+            var count = 0;
+
+            Should.CompleteIn(() =>
             {
-                DataLoaderContext.Run(async () =>
+                DataLoaderContext.Run(async ctx =>
                 {
-                    var loader = new DataLoader<int, string>(ints => ints.ToDictionary(x => x, x => $"SomeResult{x}"));
+                    var loader = new DataLoader<int, string>(ctx, ids => {
+                        count++;
+                        return ids.ToLookup(x => x, x => $"hi there x {x}");
+                    });
                     await loader.LoadAsync(1);
                     await loader.LoadAsync(2);
                     await loader.LoadAsync(3);
                     await loader.LoadAsync(4);
                 });
-            });
+            }, TimeSpan.FromSeconds(3));
+
+            count.ShouldBe(4);
         }
 
         [Fact]

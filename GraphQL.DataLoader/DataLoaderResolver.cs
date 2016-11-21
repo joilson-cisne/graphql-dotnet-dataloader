@@ -13,7 +13,7 @@ namespace GraphQL.DataLoader
         {
         }
 
-        public DataLoaderResolver(Func<TSource, int> keySelector, Func<IEnumerable<int>, IDictionary<int, TValue>> fetch) : base(keySelector, fetch)
+        public DataLoaderResolver(Func<TSource, int> keySelector, Func<IEnumerable<int>, ILookup<int, TValue>> fetch) : base(keySelector, fetch)
         {
         }
     }
@@ -21,7 +21,7 @@ namespace GraphQL.DataLoader
     /// <summary>
     /// Collect the key for each source item so that they may be processed as a batch.
     /// </summary>
-    public class DataLoaderResolver<TSource, TKey, TValue> : IFieldResolver<Task<TValue>>
+    public class DataLoaderResolver<TSource, TKey, TValue> : IFieldResolver<Task<IEnumerable<TValue>>>
     {
         private readonly Func<TSource, TKey> _keySelector;
         private readonly IDataLoader<TKey, TValue> _loader;
@@ -32,12 +32,12 @@ namespace GraphQL.DataLoader
             _loader = loader;
         }
 
-        public DataLoaderResolver(Func<TSource, TKey> keySelector, Func<IEnumerable<TKey>, IDictionary<TKey, TValue>> fetch)
+        public DataLoaderResolver(Func<TSource, TKey> keySelector, Func<IEnumerable<TKey>, ILookup<TKey, TValue>> fetch)
             : this(keySelector, new DataLoader<TKey, TValue>(fetch))
         {
         }
 
-        public Task<TValue> Resolve(ResolveFieldContext context)
+        public Task<IEnumerable<TValue>> Resolve(ResolveFieldContext context)
         {
             var source = (TSource)context.Source;
             var key = _keySelector(source);

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace GraphQL.DataLoader
 {
-    public class DataLoaderContext : IDisposable
+    public class DataLoaderContext
     {
         /// <summary>
         /// Context representing the current batching operation.
@@ -30,7 +32,6 @@ namespace GraphQL.DataLoader
             }
             finally
             {
-                ctx.Dispose();
                 Current = null;
             }
         }
@@ -63,19 +64,28 @@ namespace GraphQL.DataLoader
             Run(ctx => action());
         }
 
-        private Queue<Task> _fetchQueue;
+        private readonly Queue<Task> _fetchQueue;
+        private readonly ConcurrentDictionary<object, IDataLoader> _loaderCache;
 
         /// <summary>
         /// Creates a new DataLoaderContext.
         /// </summary>
         /// <remarks>
-        /// Provides a root to which <see cref="DataLoader"/> instances may register themselves
-        ///
-        /// defines the boundaries for the batch and fetch operation caller's responsibility to specify when to execute the context's fetch queue.
+        /// This class defines the boundary of a batching load operation
         /// </remarks>
         public DataLoaderContext()
         {
             _fetchQueue = new Queue<Task>();
+            _loaderCache = new ConcurrentDictionary<object, IDataLoader>();
+        }
+
+        /// <summary>
+        /// Retrieves a data loader with the given key, creating and storing one if none is found.
+        /// </summary>
+        public IDataLoader<TKey, TValue> GetDataLoader<TKey, TValue>(object name,
+            Func<IEnumerable<TKey>, ILookup<TKey, TValue>> fetch)
+        {
+            return (IDataLoader<TKey, TValue>) _loaderCache.GetOrAdd(name, _ => new DataLoader<TKey, TValue>(this, fetch));
         }
 
         /// <summary>
@@ -90,9 +100,9 @@ namespace GraphQL.DataLoader
         }
 
         /// <summary>
-        /// Registers the specified batch fetch callback for later execution.
+        /// Queues the given fetch function to fire in the next round of fetches.
         /// </summary>
-        internal async Task<T> Register<T>(Func<T> fetch)
+        internal async Task<T> Enqueue<T>(Func<T> fetch)
         {
             if (_fetchQueue == null)
                 throw new ObjectDisposedException(nameof(DataLoaderContext));
@@ -100,14 +110,6 @@ namespace GraphQL.DataLoader
             var task = new Task<T>(fetch);
             _fetchQueue.Enqueue(task);
             return await task;
-        }
-
-        /// <summary>
-        /// Disposes of the DataLoaderContext.
-        /// </summary>
-        public void Dispose()
-        {
-            _fetchQueue = null;
         }
     }
 }
