@@ -7,63 +7,79 @@ using System.Threading.Tasks;
 
 namespace GraphQL.DataLoader
 {
-    public delegate ILookup<int, T> FetchDelegate<T>(IEnumerable<int> keys);
-
     public interface IDataLoader
     {
-        Task<IEnumerable> LoadAsync(int key);
+        Task<object> LoadAsync(object key);
     }
 
-    public interface IDataLoader<T>
+    public interface IDataLoader<in TKey, TValue>
     {
-        Task<IEnumerable<T>> LoadAsync(int key);
+        Task<TValue> LoadAsync(TKey key);
     }
 
-    public class DataLoader<T> : IDataLoader<T>, IDataLoader
+    public class DataLoader<TKey, TValue> : IDataLoader<TKey, TValue>, IDataLoader
     {
-        private readonly DataLoaderContext _context;
-        private readonly FetchDelegate<T> _fetchFunc;
-        private HashSet<int> _keys = new HashSet<int>();
-        private Task<ILookup<int, T>> _future;
+        private readonly Func<IEnumerable<TKey>, IDictionary<TKey, TValue>> _fetchFunc;
+        private HashSet<TKey> _keys = new HashSet<TKey>();
+        private Task<IDictionary<TKey, TValue>> _future;
 
         /// <summary>
-        /// Initialize a new DataLoader using an explicit context.
-        /// The context controls the beginning/end of each batch and fetch cycle.
+        /// The context this loader is attached to.
         /// </summary>
-        public DataLoader(DataLoaderContext context, FetchDelegate<T> fetchFunc)
+        public DataLoaderContext Context { get; }
+
+        /// <summary>
+        /// The keys to be sent in the next batch.
+        /// </summary>
+        public IEnumerable<TKey> Keys => _keys.Select(key => key);
+
+        /// <summary>
+        /// Initializes a new <see cref="DataLoader"/> attached to the specified context.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="fetchFunc"></param>
+        public DataLoader(DataLoaderContext context, Func<IEnumerable<TKey>, IDictionary<TKey, TValue>> fetchFunc)
         {
-            _context = context;
+            Context = context;
             _fetchFunc = fetchFunc;
         }
 
         /// <summary>
-        /// Initialize a new DataLoader using the implicit (ambient) context.
-        /// The ambient context is created by the static Run method and stored
-        /// in the Current property.
+        /// Initializes a new <see cref="DataLoader"/> using the default ambient context.
         /// </summary>
         /// <param name="fetchFunc"></param>
-        internal DataLoader(FetchDelegate<T> fetchFunc) : this(DataLoaderContext.Current, fetchFunc)
+        public DataLoader(Func<IEnumerable<TKey>, IDictionary<TKey, TValue>> fetchFunc) : this(DataLoaderContext.Current, fetchFunc)
         {
         }
 
-        public async Task<IEnumerable<T>> LoadAsync(int key)
+        /// <summary>
+        /// Calls the configured fetch function, passing it the batch of keys.
+        /// </summary>
+        private IDictionary<TKey, TValue> Fetch() => _fetchFunc(Interlocked.Exchange(ref _keys, new HashSet<TKey>()));
+
+        /// <summary>
+        /// Retrieves a <typeparamref name="TValue"/> for the given <typeparamref name="TKey"/>
+        /// </summary>
+        /// <param name="key"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        public async Task<TValue> LoadAsync(TKey key)
         {
-            if (_context == null)
-                throw new InvalidOperationException($"No DataLoaderContext has been set");
+            if (Context == null)
+                throw new InvalidOperationException($"No DataLoaderContext is set");
 
             if (_keys.Count == 0)
-                _future = _context.Enqueue(Fetch);
+                _future = Context.Register(Fetch);
 
             _keys.Add(key);
+
             var batchResult = await _future.ConfigureAwait(false);
+
             return batchResult[key];
         }
 
-        async Task<IEnumerable> IDataLoader.LoadAsync(int key)
+        async Task<object> IDataLoader.LoadAsync(object key)
         {
-            return await LoadAsync(key).ConfigureAwait(false);
+            return await LoadAsync((TKey)key).ConfigureAwait(false);
         }
-
-        private ILookup<int, T> Fetch() => _fetchFunc(Interlocked.Exchange(ref _keys, new HashSet<int>()));
     }
 }

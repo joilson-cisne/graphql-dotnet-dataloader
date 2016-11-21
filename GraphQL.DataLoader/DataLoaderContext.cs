@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace GraphQL.DataLoader
@@ -8,14 +7,12 @@ namespace GraphQL.DataLoader
     public class DataLoaderContext : IDisposable
     {
         /// <summary>
-        /// Context representing the collection phase for the current DataLoader batch.
+        /// Context representing the current batching operation.
         /// </summary>
         public static DataLoaderContext Current { get; private set; }
 
         /// <summary>
-        /// Runs code within a new DataLoaderContext.
-        /// Loaders will collect keys during the given function's
-        /// execution then fire them synchronously once finished.
+        /// Runs code within a new <see cref="DataLoaderContext"/> before executing each batch load.
         /// </summary>
         public static T Run<T>(Func<DataLoaderContext, T> func)
         {
@@ -37,10 +34,9 @@ namespace GraphQL.DataLoader
                 Current = null;
             }
         }
+
         /// <summary>
-        /// Runs code within a new DataLoaderContext.
-        /// Loaders will collect keys during the given function's
-        /// execution then fire them synchronously once finished.
+        /// Runs code within a new <see cref="DataLoaderContext"/> before executing each batch load.
         /// </summary>
         public static void Run(Action<DataLoaderContext> action)
         {
@@ -52,9 +48,7 @@ namespace GraphQL.DataLoader
         }
 
         /// <summary>
-        /// Runs code within a new DataLoaderContext.
-        /// Loaders will collect keys during the given function's
-        /// execution then fire them synchronously once finished.
+        /// Runs code within a new <see cref="DataLoaderContext"/> before executing each batch load.
         /// </summary>
         public static T Run<T>(Func<T> func)
         {
@@ -62,81 +56,50 @@ namespace GraphQL.DataLoader
         }
 
         /// <summary>
-        /// Runs code within a new DataLoaderContext.
-        /// Loaders will collect keys during the given action's
-        /// execution then fire them synchronously once finished.
+        /// Runs code within a new <see cref="DataLoaderContext"/> before executing each batch load.
         /// </summary>
         public static void Run(Action action)
         {
             Run(ctx => action());
         }
 
-        /// <summary>
-        /// Pending fetches.
-        /// </summary>
-        private Queue<Action> _queue;
-
-        private CancellationTokenSource _cancellationTokenSource;
-        private CancellationToken _cancellationToken;
+        private Queue<Task> _fetchQueue;
 
         /// <summary>
         /// Creates a new DataLoaderContext.
-        ///
-        /// When constructing a DataLoaderContext manually, it becomes the caller's
-        /// responsibility to specify when to execute the context's fetch queue.
-        /// The created context should be passed to a DataLoader's constructor,
-        /// which will then add itself to the fetch queue when LoadAsync is called.
-        /// When the batch phase is finished and it's time to execute the batch
-        /// queries, call the Flush method.
-        ///
-        /// This approach gives the developer greater control over the batch/fetch cycle
-        /// when compared to implicitly creating a (ambient) context via the static Run method
-        /// and helps mediate any thread safety concerns, since the dependency is explicitly
-        /// passing through the call stack. This can also help make data and control flow clearer
-        /// (especially for shallow call stacks), however in scenarios where the data loads are
-        /// occurring deep within an application's stack, relying on an implicit context may be
-        /// more appropriate to keep intermediary methods clean from parameters that are unrelated
-        /// to the method's purpose but are required by the things it calls.
         /// </summary>
+        /// <remarks>
+        /// Provides a root to which <see cref="DataLoader"/> instances may register themselves
+        ///
+        /// defines the boundaries for the batch and fetch operation caller's responsibility to specify when to execute the context's fetch queue.
+        /// </remarks>
         public DataLoaderContext()
         {
-            _queue = new Queue<Action>();
-            _cancellationTokenSource = new CancellationTokenSource();
-            _cancellationToken = _cancellationTokenSource.Token;
+            _fetchQueue = new Queue<Task>();
         }
 
         /// <summary>
-        /// Triggers the pending loaders sequentially until there are none left.
-        /// Note that code may run when a task completes that causes more
-        /// functions to be added to the queue. This is what we want, since it
-        /// allows us to set up dependent loaders and resolvers.
+        /// Executes each registered callback sequentially until there are no more to process.
         /// </summary>
         public void Flush()
         {
-            while (_queue.Count > 0)
+            while (_fetchQueue.Count > 0)
             {
-                _queue.Dequeue().Invoke();
+                _fetchQueue.Dequeue().RunSynchronously();
             }
         }
 
         /// <summary>
-        /// Enqueue a function to be executed later.
+        /// Registers the specified batch fetch callback for later execution.
         /// </summary>
-        public Task<T> Enqueue<T>(Func<T> fetch)
+        internal async Task<T> Register<T>(Func<T> fetch)
         {
-            if (_queue == null)
+            if (_fetchQueue == null)
                 throw new ObjectDisposedException(nameof(DataLoaderContext));
 
-            var tcs = new TaskCompletionSource<T>();
-            var cancellation = _cancellationToken.Register(tcs.SetCanceled);
-
-            _queue.Enqueue(() =>
-            {
-                cancellation.Dispose();
-                tcs.SetResult(fetch());
-            });
-
-            return tcs.Task;
+            var task = new Task<T>(fetch);
+            _fetchQueue.Enqueue(task);
+            return await task;
         }
 
         /// <summary>
@@ -144,10 +107,7 @@ namespace GraphQL.DataLoader
         /// </summary>
         public void Dispose()
         {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
-            _cancellationTokenSource = null;
-            _queue = null;
+            _fetchQueue = null;
         }
     }
 }

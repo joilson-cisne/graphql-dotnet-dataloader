@@ -30,7 +30,8 @@ namespace GraphQL.DataLoader.StarWarsApp
                         ... on Human {
                             humanId
                             homePlanet
-                            friends1 {
+                            friends {
+                                name
                                 friends {
                                     name
                                 }
@@ -44,7 +45,8 @@ namespace GraphQL.DataLoader.StarWarsApp
             var executer = new DocumentExecuter();
 
             clock?.Start();
-            var result = DataLoaderContext.Run(() => executer.ExecuteAsync(schema, null, query, null)).Result;
+            var task = DataLoaderContext.Run(ctx => executer.ExecuteAsync(schema, null, query, null));
+            var result = task.GetAwaiter().GetResult();
             clock?.Stop();
             return result;
         }

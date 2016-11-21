@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System;
+using System.Linq;
 using Shouldly;
 using Xunit;
 
@@ -8,11 +8,11 @@ namespace GraphQL.DataLoader.Tests
     public class DataLoaderContextTests
     {
         [Fact]
-        public void DataLoaderContext_Run_ExecutesInNewContext()
+        public void DataLoaderContext_Run_SetsContext()
         {
             DataLoaderContext.Current.ShouldBeNull();
 
-            DataLoaderContext.Run(() =>
+            DataLoaderContext.Run(ctx =>
             {
                 DataLoaderContext.Current.ShouldNotBeNull();
             });
@@ -21,33 +21,38 @@ namespace GraphQL.DataLoader.Tests
         }
 
         [Fact]
-        public void DataLoaderContext_Run_IsThreadSafe()
+        public void DataLoaderContext_Run_ThrowsWhenCalledTwice()
         {
-            var contexts = new List<DataLoaderContext>();
-            var signal = new AutoResetEvent(false);
-
-            ThreadStart action = () =>
+            DataLoaderContext.Run(() =>
             {
-                DataLoaderContext.Run(() =>
+                Should.Throw<InvalidOperationException>(() =>
                 {
-                    contexts.Add(DataLoaderContext.Current);
-                    signal.Set();
+                    DataLoaderContext.Run(() => { });
                 });
-            };
+            });
+        }
 
-            var thread1 = new Thread(action);
-            var thread2 = new Thread(action);
+        [Fact]
+        public void DataLoaderContext_Flush_CanHandleMultipleLevelsOfNestedFetches()
+        {
+            string result1;
+            string result2;
+            string result3;
 
-            thread1.Start();
-            signal.WaitOne();
+            var result = DataLoaderContext.Run(async () =>
+            {
+                var loader = new DataLoader<int, string>(ints => ints.ToDictionary(x => x, x => $"SomeResult{x}"));
+                result1 = await loader.LoadAsync(1);
+                result2 = await loader.LoadAsync(2);
+                result3 = await loader.LoadAsync(3);
+                return new[] {result1, result2, result3};
+            }).Result;
+        }
 
-            thread2.Start();
-            signal.WaitOne();
+        [Fact]
+        public void DataLoaderContext_IsAsyncSafe()
+        {
 
-            thread1.Join();
-            thread2.Join();
-
-            contexts.ShouldBeUnique();
         }
     }
 }

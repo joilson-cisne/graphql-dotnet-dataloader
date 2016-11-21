@@ -1,7 +1,10 @@
 ﻿namespace GraphQL.DataLoader.StarWarsApp.Schema
 {
-    public class StarWarsSchema
+    public class StarWarsSchema : GraphQL.Types.Schema
     {
-
+        public StarWarsSchema()
+        {
+            Query = new StarWarsQuery();
+        }
     }
 }

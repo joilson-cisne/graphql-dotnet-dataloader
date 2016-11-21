@@ -1,6 +1,6 @@
+using System.Linq;
 using GraphQL.DataLoader.StarWarsApp.Data;
 using GraphQL.Types;
-using Microsoft.EntityFrameworkCore;
 
 namespace GraphQL.DataLoader.StarWarsApp.Schema
 {
@@ -15,7 +15,7 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
                 .Resolve(ctx =>
                 {
                     using (var db = new StarWarsContext())
-                        return db.Humans.ToListAsync();
+                        return db.Humans.ToList();
                 });
 
             Field<ListGraphType<DroidType>>()
@@ -23,7 +23,7 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
                 .Resolve(ctx =>
                 {
                     using (var db = new StarWarsContext())
-                        return db.Droids.ToListAsync();
+                        return db.Droids.ToList();
                 });
         }
     }

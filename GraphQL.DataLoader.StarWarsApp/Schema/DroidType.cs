@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using GraphQL.DataLoader.StarWarsApp.Data;
 using GraphQL.Types;
@@ -15,20 +16,21 @@ namespace GraphQL.DataLoader.StarWarsApp.Schema
             Field(d => d.PrimaryFunction);
             Interface<CharacterInterface>();
 
-            FetchDelegate<Human> fetchFriends = ids =>
+            Func<IEnumerable<int>, IDictionary<int, IEnumerable<Human>>> fetchFriends = ids =>
             {
                 Console.WriteLine("Fetching friends of droids " + string.Join(", ", ids));
                 using (var db = new StarWarsContext())
                     return db.Friendships
                         .Where(f => ids.Contains(f.DroidId))
                         .Select(f => new {Key = f.DroidId, f.Human})
-                        .ToLookup(x => x.Key, x => x.Human);
+                        .GroupBy(x => x.Key, x => x.Human)
+                        .ToDictionary(x => x.Key, x => x.AsEnumerable());
             };
 
-            // See HumanType.cs for more examples
+            var friendsLoader = new DataLoader<int, IEnumerable<Human>>(fetchFriends);
             Field<ListGraphType<CharacterInterface>>()
                 .Name("friends")
-                .Resolve(d => d.DroidId, fetchFriends);
+                .Resolve(ctx => friendsLoader.LoadAsync(ctx.Source.DroidId));
         }
     }
 }
